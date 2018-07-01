@@ -16,7 +16,7 @@ import static java.util.Arrays.copyOfRange;
 public class EmisorUDP {
     static int tamDatos = 116; //Tamaño de los datos + mas checksum 8 + numero de secuencia 4 = 128.
     static int tamVentana = 10; //Tamaño inicial de la ventana.
-    static int valorTimeout = 300; //300 milisegundos.
+    static int valorTimeout = 5000; //5000 milisegundos.
 
     int base; //Numero de secuencia base de la ventana.
     int sigNumSecuencia; //Siguiente número de secuencia en la ventana.
@@ -102,7 +102,8 @@ public class EmisorUDP {
         public int leerDatos(byte[] dataBuffer, byte[] bytesMensaje) {
             int r = 0;
             boolean finString = false;
-            for(int i = indice; i < (indice+tamDatos) && finString == false; i++) {
+            int indInicial = indice;
+            for(int i = indice; i < (indInicial+tamDatos) && finString == false && indice < bytesMensaje.length; i++) {
                 dataBuffer[r] = bytesMensaje[i];
                 indice++;
                 r++;
@@ -173,7 +174,7 @@ public class EmisorUDP {
                 finally {
                     setTimer(false); //Finaliza el temporizador.
                     socketSalida.close(); //Se cierra el socket.
-                    System.out.println("Emisor: Socket cerrado.");
+                    System.out.println("Emisor: Socket de salida cerrado.");
                 }
             }
             catch(Exception e) {
@@ -253,7 +254,7 @@ public class EmisorUDP {
                 }
                 finally {
                     socketEntrada.close();
-                    System.out.println("Sender: Socket de entrada cerrado!");
+                    System.out.println("Emisor: Socket de entrada cerrado.");
                 }
             }
             catch (Exception e) {
