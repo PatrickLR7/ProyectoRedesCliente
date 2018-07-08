@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -24,7 +25,14 @@ public class EmisorUDP {
     Timer timer; //Para el temporizador de retransmisión.
     Semaphore sem;
     boolean transferenciaCompleta; //Si el receptor ha recibido completamente el string.
-    boolean hayMasDatos = true;
+    boolean hayMasDatos = true; // Bandera para detectar si quedan más datos por transmitir.
+
+    double tInicio; //Tiempo en el que se mandó un paquete.
+    double tFinal; //Tiempo en el que se recibió el ACK correspondiente al paquete.
+    double RTT = 0; //Round Trip Time.
+    double RTT_viejo = 7000; //Se asumen 7 segundos para el RTT inicial.
+    double RTT_calculado = 0; // Para el RTT calculado (se calcula con tInicio y tFinal).
+    private static DecimalFormat formatoDe = new DecimalFormat("#.###"); //Formato para los doubles del RTT.
 
 
     /**
@@ -166,6 +174,7 @@ public class EmisorUDP {
                             }
                             if(porcentajePerdida < 80) { //Si el número es menor a 80 se envía el paquete, de lo contrario se desecha el paquete y no se envía por la red.
                                 socketSalida.send(ps); //Se envía el paquete a traves del socket.
+                                tInicio = System.nanoTime(); //Para calcular el tiempo desde que se envió el paquete.
                                 System.out.println("Emisor: Número de secuencia enviado: " + sigNumSecuencia);
                             } else {
                                 System.out.println("Emisor: Paquete: " + sigNumSecuencia + " descartado. (Simulando 20% de pérdida). ");
@@ -177,6 +186,8 @@ public class EmisorUDP {
                             }
                             sem.release();
                         }
+                        SecureRandom sr = new SecureRandom();
+                        int pausa = sr.nextInt(500);
                         sleep(500); //Para generar paquetes cada medio segundo.
                     }
                 }
@@ -248,6 +259,12 @@ public class EmisorUDP {
                                 transferenciaCompleta = true;
                             }
                             else { //Si es un ACK normal.
+                                tFinal = System.nanoTime(); //Para calcular el tiempo cuando llega el ACK.
+                                RTT_calculado = (tFinal - tInicio) / 1000000;
+                                RTT = (0.5*RTT_viejo) + ((1-0.5)*RTT_calculado); //Formula para calcular el RTT.
+                                System.out.println("Emisor: RTT: " + formatoDe.format(RTT) + " ms.");
+                                RTT_viejo = RTT;
+
                                 base = numAck++; //Actualice el numero base.
                                 sem.acquire();
                                 if(base == sigNumSecuencia) { // Si no hay más paquetes para los cuáles no se ha recibido el ACK, finalice el temporizador.
