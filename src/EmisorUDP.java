@@ -20,6 +20,7 @@ public class EmisorUDP {
 
     int base; //Numero de secuencia base de la ventana.
     int sigNumSecuencia; //Siguiente número de secuencia en la ventana.
+    int sigPaqueteAEnviar; // Siguiente paquete que se debe enviar.
     Vector<byte[]> listaPaquetes; //Lista de paquetes generados.
     Timer timer; //Para el temporizador de retransmisión.
     Semaphore sem;
@@ -119,6 +120,7 @@ public class EmisorUDP {
             try {
                 direccionDest = InetAddress.getByName("127.0.0.1");
                 String mensaje = randomString(1000);
+                sigPaqueteAEnviar = 0;
                 try {
                     while(!transferenciaCompleta) { //Mientras todavía hay paquetes por recibir por el receptor.
                         if(sigNumSecuencia < base + tamVentana) { //Si la ventana aun no está llena, enviar paquetes
@@ -156,8 +158,14 @@ public class EmisorUDP {
                                 }
                                 listaPaquetes.add(datosSalida);  //Se agrega el paquete a la lista.
                             }
-                            socketSalida.send(new DatagramPacket(datosSalida, datosSalida.length, direccionDest, puertoDest1)); //Se envía el paquete a traves del socket.
-                            System.out.println("Emisor: Número de secuencia enviado: " + sigNumSecuencia);
+                            SecureRandom r = new SecureRandom(); //Random para simular el 20% de pérdida de los paquetes.
+                            int porcentajePerdida = r.nextInt(99);  //Genera un número al azar entre 0 y 99.
+                            if(porcentajePerdida < 80) { //Si el número es menor a 80 se envía el paquete, de lo contrario se desecha el paquete y no se envía por la red.
+                                socketSalida.send(new DatagramPacket(datosSalida, datosSalida.length, direccionDest, puertoDest1)); //Se envía el paquete a traves del socket.
+                                System.out.println("Emisor: Número de secuencia enviado: " + sigNumSecuencia);
+                            } else {
+                                System.out.println("Emisor: Paquete: " + sigPaqueteAEnviar + " descartado. (Simulando 20% de pérdida). ");
+                            }
 
                             //Si actualmente no se está en el número de secuencia final, se actualiza el siguiente numero de secuencia.
                             if(!esFinal) {
@@ -223,6 +231,7 @@ public class EmisorUDP {
                     while(!transferenciaCompleta) { //Mientras todavía hay paquetes por recibir por el receptor.
                         socketEntrada.receive(paqueteEntrada);
                         int numAck = decodificarPaquete(datosEntrada);
+                        sigPaqueteAEnviar = numAck+1; //Esto sirve para imprimir el paquete que fue descartado al simular 20% de perdida.
                         System.out.println("Emisor: ACK recibido: " + numAck);
 
                         if(numAck != -1) { //Si el ACK no es corrupto.
