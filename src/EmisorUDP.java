@@ -159,7 +159,7 @@ public class EmisorUDP {
                                 listaPaquetes.add(datosSalida);  //Se agrega el paquete a la lista.
                             }
                             SecureRandom r = new SecureRandom(); //Random para simular el 20% de pérdida de los paquetes.
-                            int porcentajePerdida = r.nextInt(99);  //Genera un número al azar entre 0 y 99.
+                            int porcentajePerdida = r.nextInt(99);  //Genera un número al azar entre 0  y  99.
                             if(porcentajePerdida < 80) { //Si el número es menor a 80 se envía el paquete, de lo contrario se desecha el paquete y no se envía por la red.
                                 socketSalida.send(new DatagramPacket(datosSalida, datosSalida.length, direccionDest, puertoDest1)); //Se envía el paquete a traves del socket.
                                 System.out.println("Emisor: Número de secuencia enviado: " + sigNumSecuencia);
